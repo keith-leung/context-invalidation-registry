@@ -1,0 +1,11 @@
+llama-index>=0.12.0
+llama-parse>=0.5.0
+langgraph>=0.2.0
+litellm>=1.55.0
+openai>=1.0.0
+cohere>=5.0.0
+pyyaml>=6.0
+numpy>=1.24.0
+tenacity>=8.0.0
+# Guardrails stack (defense-in-depth)
+nemoguardrails>=0.12.0

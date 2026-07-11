@@ -1,0 +1,62 @@
+[
+  {
+    "event_id": "CE001",
+    "event_name": "2025-Q3 Pre-made Food Public Trust Event",
+    "event_date": "2025-09-10",
+    "affected_industries": [
+      "food_local_services",
+      "fmcg_retail"
+    ],
+    "affected_regions": [
+      "CN"
+    ],
+    "impact_description": "Consumer perception of pre-made food fundamentally shifted. Government standards claims became irrelevant — consumers reject any association with central kitchen processing. 90%+ negative sentiment. Brand lost significant market share and closed multiple locations.",
+    "invalidated_strategies": [
+      "Promoting central kitchen as quality assurance",
+      "Citing national standards as consumer trust signal",
+      "Pre-made food transparency as marketing angle"
+    ],
+    "new_required_strategies": [
+      "Absolute transparency about food preparation methods",
+      "Consumer perception management over legal compliance",
+      "Crisis response preparedness for KOL attacks"
+    ]
+  },
+  {
+    "event_id": "CE002",
+    "event_name": "2023-Q4 Cervical Pillow False Advertising Event",
+    "event_date": "2023-12-13",
+    "affected_industries": [
+      "fitness_equipment"
+    ],
+    "affected_regions": [
+      "CN"
+    ],
+    "impact_description": "Market regulators cracked down on non-medical devices using medical terminology. Medical efficacy language on a consumer wellness product triggered investigation under advertising law.",
+    "invalidated_strategies": [
+      "Using medical efficacy language for non-medical products"
+    ],
+    "new_required_strategies": [
+      "Strict advertising law compliance review before any content publication"
+    ]
+  },
+  {
+    "event_id": "CE099",
+    "event_name": "Demo Regulatory Shift",
+    "event_date": "2025-08-01",
+    "affected_industries": [
+      "food_local_services",
+      "fmcg_retail"
+    ],
+    "affected_regions": [
+      "CN"
+    ],
+    "impact_description": "A demo regulatory shift invalidates pre-August 2025 food marketing strategies.",
+    "invalidated_strategies": [
+      "Legacy compliance messaging"
+    ],
+    "new_required_strategies": [
+      "Proactive transparency disclosures"
+    ]
+  }
+]

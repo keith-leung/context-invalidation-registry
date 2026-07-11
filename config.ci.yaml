@@ -1,0 +1,47 @@
+# config.ci.yaml — CI / test config (committed, mode: mock).
+# CI uses this file so no real keys are needed.
+
+mode: mock
+
+default_provider: minimax
+
+providers:
+  minimax:
+    base_url: https://gpt-agent.cc/v1
+    api_key: FILL_IN_CONFIG_YAML
+    tiers:
+      low:    { model: MiniMax-M2.7-highspeed }
+      medium: { model: MiniMax-M2.7-highspeed }
+      high:   { model: MiniMax-M2.7-highspeed }
+
+judge:
+  provider: minimax
+  tier: medium
+
+embedding:
+  provider: mock
+  dimensions: 1536
+
+reranker:
+  provider: mock
+
+guardrails:
+  enabled: true
+  nemoguardrails: false
+  llamaguard: false
+  fallback_reason: "CI mock mode"
+  blocklists:
+    political:
+      - "taiwan independence"
+      - "tibet independence"
+      - "overthrow the government"
+    medical:
+      - "treatment"
+      - "cure"
+      - "cure all"
+    financial:
+      - "guaranteed returns"
+      - "risk-free profit"
+
+data_dir: data
+seed_events_file: critical_events.demo.json
