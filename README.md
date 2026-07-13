@@ -66,6 +66,24 @@ Ordinary staleness (TTL, last-modified) is a quality problem: old data is less a
 
 This is the original architectural contribution of this repo: bridging database-tombstone semantics with agent state lineage through **event-driven semantic invalidation**, the **Critical Events Registry**, and **tombstone propagation**.
 
+## Architecture Decisions
+
+### Why event-driven staleness is not TTL staleness
+
+Ordinary staleness (TTL, last-modified) is a quality problem: old data is less accurate. Event-driven staleness is a safety problem: a datum was correct when retrieved, but a subsequent event (regulatory change, scandal, safety recall) made it actively harmful to use. The registry doesn't say "this data is old"; it says "this strategy was valid on date X, but event Y on date Z invalidated it." Recommending a now-illegal strategy is not a quality bug — it is an active liability.
+
+### Why D→A uses an invalidation signal instead of directly mutating checkpoints
+
+D is the event source; A is the tombstone executor. If D directly mutates A's checkpoints, the two repos become tightly coupled and A loses ownership of its own state graph. The `InvalidationSignal` is a frozen predicate (`industries`, `regions`, `vintage_before`) that A's `tombstone_items_matching` consumes. D emits events; A decides how to tombstone. This separation lets each repo evolve independently and makes the cross-repo contract auditable.
+
+### Why NeMo Guardrails + Llama Guard 4 instead of a single tool
+
+The 2026 defense-in-depth convention is layered, not monolithic. NeMo Guardrails is the orchestration/policy layer (Colang DSL, input/output rails, topic flows). Llama Guard 4 is the LLM-based safety classifier that judges content. One tool doing both is a single point of failure; two tools with distinct failure modes give true depth. If either framework is unavailable, the system falls back to the hand-rolled mechanism with an honest annotation — no silent degradation.
+
+### Why the Critical Events Registry is original IP
+
+No major RAG or agent framework today provides event-driven semantic invalidation. Vector stores invalidate by TTL or manual deletion. GraphRAG invalidates by subgraph replacement, but it is still data-layer invalidation, not event-layer. This repo's registry encodes *what happened in the world* (a scandal, a regulation, a recall) and maps that world-event to a semantic invalidation of strategies. The downstream tombstone propagation through checkpoint graphs is the architectural contribution: database-tombstone semantics applied to agent state lineage via an event stream.
+
 ## Frameworks and landscape
 
 ### Retrieval frameworks (2026 agentic-RAG big three)

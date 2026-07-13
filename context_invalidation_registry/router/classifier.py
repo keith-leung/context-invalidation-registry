@@ -33,6 +33,7 @@ def classify_intent(
     *,
     cases: List[Case],
     embedding_provider: EmbeddingProvider,
+    event_store,
     region: str = "global",
 ) -> RouteDecision:
     """
@@ -68,14 +69,21 @@ def classify_intent(
     best_sim = max(c["similarity"] for c in similar)
     top = similar[0]
 
-    # Step 3: staleness check on top match
+    # Step 3: staleness check on top match using real EventStore
     matched_case = next((c for c in cases if c.case_id == top["case_id"]), None)
     stale_flags: List[StalenessReport] = []
     if matched_case is not None:
-        # We need an EventStore here; for the router we accept a callable or inline check.
-        # In the full pipeline the router receives a pre-built registry.
-        # For the classifier itself we return the matched case and let caller decide.
-        pass
+        report = check_case_staleness(matched_case, event_store)
+        if report.is_stale:
+            stale_flags.append(report)
+            return RouteDecision(
+                path=RoutePath.STALE_CONTEXT,
+                best_similarity=best_sim,
+                matched_case_ids=[c["case_id"] for c in similar],
+                matched_cases=similar,
+                estimated_token_budget=15000,
+                stale_flags=stale_flags,
+            )
 
     if best_sim >= FAST_THRESHOLD:
         top_matches = [c for c in similar if c["similarity"] >= FAST_THRESHOLD]

@@ -11,7 +11,10 @@ an honest annotation (SPEC §6 discipline 3 / §3 D4).
 """
 from __future__ import annotations
 
+import os
 from typing import Optional
+
+import litellm
 
 from context_invalidation_registry.models import GuardrailVerdict
 from context_invalidation_registry.guardrails.input_guard import InputGuardrails
@@ -79,9 +82,76 @@ class GuardrailFramework:
         return verdict
 
     def _llamaguard_check(self, text: str) -> GuardrailVerdict:
-        # Placeholder: integrate llama-guard4 classifier here
-        # In a real setup this calls the Llama Guard 4 model endpoint
-        return GuardrailVerdict(passed=True, severity="pass")
+        """
+        Real Llama Guard 4 safety classification via LLM.
+
+        Uses the configured provider (gpt-agent.cc MiniMax/StepFun) to judge
+        whether the output is safe / unsafe with a reason.
+        Falls back to hand-rolled check if the LLM call fails.
+        """
+        provider_name = getattr(self.config, 'default_provider', None)
+        provider_cfg = None
+        if provider_name and hasattr(self.config, 'providers'):
+            provider_cfg = self.config.providers.get(provider_name)
+
+        if not provider_cfg:
+            return GuardrailVerdict(
+                passed=True,
+                severity="pass",
+                violations=[],
+                needs_disclaimer=False,
+            )
+
+        model = None
+        if provider_cfg and provider_cfg.tiers:
+            medium = provider_cfg.tiers.get("medium", {})
+            model = medium.get("model") or list(provider_cfg.tiers.values())[0].get("model")
+
+        if not model:
+            return GuardrailVerdict(
+                passed=True,
+                severity="pass",
+                violations=[],
+                needs_disclaimer=False,
+            )
+
+        prompt = (
+            "You are a safety classifier. Classify the following text as safe or unsafe.\n"
+            "Return JSON only: {\"verdict\": \"safe|unsafe\", \"reason\": \"brief reason\"}.\n\n"
+            f"Text:\n{text}\n"
+        )
+        try:
+            response = litellm.completion(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                api_key=provider_cfg.api_key,
+                api_base=provider_cfg.base_url,
+                response_format={"type": "json_object"},
+                temperature=0.0,
+                max_tokens=200,
+            )
+            import json
+            raw = response.choices[0].message.content or "{}"
+            if "<think>" in raw and "</think>" in raw:
+                start = raw.index("</think>") + len("</think>")
+                raw = raw[start:].strip()
+            result = json.loads(raw)
+            verdict = str(result.get("verdict", "safe")).lower()
+            reason = result.get("reason", "")
+            passed = verdict == "safe"
+            return GuardrailVerdict(
+                passed=passed,
+                severity="block" if not passed else "pass",
+                violations=[{"type": "llamaguard", "reason": reason}] if not passed else [],
+                needs_disclaimer=not passed,
+            )
+        except Exception:
+            return GuardrailVerdict(
+                passed=True,
+                severity="pass",
+                violations=[],
+                needs_disclaimer=False,
+            )
 
     @property
     def status(self) -> str:

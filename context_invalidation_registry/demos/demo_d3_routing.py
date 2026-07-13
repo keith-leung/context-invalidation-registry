@@ -49,34 +49,17 @@ def demo_d3_routing() -> Dict[str, Any]:
     )
     cases = [stale_case, fresh_case]
 
-    # Step 1: classify
+    # Step 1: classify with real EventStore (stale-aware downgrade happens inside)
     route = classify_intent(
         query_text=query_text,
         query_embedding=query_emb,
         cases=cases,
         embedding_provider=embedding,
+        event_store=store,
         region="CN",
     )
 
-    # Step 2: staleness-aware downgrade (D1 feeding D3)
-    stale_flags = []
-    for c in cases:
-        report = check_case_staleness(c, store)
-        if report.is_stale:
-            stale_flags.append(report)
-            if route.path == RoutePath.FAST:
-                route = type(route)(
-                    path=RoutePath.STALE_CONTEXT,
-                    best_similarity=route.best_similarity,
-                    matched_case_ids=route.matched_case_ids,
-                    matched_cases=route.matched_cases,
-                    cache_hit=route.cache_hit,
-                    cached_result=route.cached_result,
-                    estimated_token_budget=route.estimated_token_budget,
-                    stale_flags=stale_flags,
-                )
-
-    # Step 3: reranker demo (mock)
+    # Step 2: reranker demo (mock)
     reranker = Reranker(provider="mock")
     rerank_result = reranker.rerank(query_text, route.matched_cases)
 

@@ -70,13 +70,14 @@ class ContextAssemblyWorkflow:
                 trace=trace,
             )
 
-        # Step 2: route
+        # Step 2: route with real EventStore (stale-aware downgrade happens inside)
         query_emb = self.embedding_provider.embed(query)
         route = classify_intent(
             query_text=query,
             query_embedding=query_emb,
             cases=self.cases,
             embedding_provider=self.embedding_provider,
+            event_store=self.event_store,
             region=region,
         )
         trace.append({"step": "route", "route": route.path, "best_similarity": route.best_similarity})
