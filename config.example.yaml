@@ -1,29 +1,73 @@
 # config.example.yaml — template (committed). Copy to config.yaml and fill
-# real keys; config.yaml is gitignored and NEVER committed.
-# Shape per shared/LLM_PROVIDERS.md.
+# real keys. config.yaml is gitignored and NEVER committed.
+# Mode switching is strictly via this file's `mode:` field, NOT env vars.
 
-default_provider: mimo          # or minimax
+# `mode: real` wires the LLM/embedding paths through the configured
+# provider. `mode: mock` uses deterministic offline substitutes
+# (see config.ci.yaml).
+mode: real
+
+# Default provider used by classify_intent + guardrails + reranker synthesis
+# unless overridden per-component below.
+default_provider: openai
 
 providers:
-  mimo:
-    base_url: https://api.xiaomimimo.com/v1
-    api_key: FILL_IN_CONFIG_YAML   # real key in config.yaml only
-    tiers:
-      low:    { model: mimo-v2.5-pro-ultraspeed }
-      medium: { model: mimo-v2.5-pro-ultraspeed }
-      high:   { model: mimo-v2.5-pro-ultraspeed }
-  minimax:
+  openai:
+    # Any OpenAI-compatible endpoint (openai.com, gpt-agent.cc, Azure, etc.).
     base_url: https://gpt-agent.cc/v1
-    api_key: FILL_IN_CONFIG_YAML   # real key in config.yaml only
+    api_key: REPLACE_WITH_YOUR_KEY
     tiers:
-      low:    { model: MiniMax-M2.7-highspeed }   # case-sensitive
-      medium: { model: MiniMax-M2.7-highspeed }
-      high:   { model: MiniMax-M2.7-highspeed }
+      low:    { model: step-3.7-flash }
+      medium: { model: step-3.7-flash }
+      high:   { model: step-3.7-flash }
 
-# Cross-vendor judging guard: the judge MUST be a different vendor from the
-# SUT. Canonical pair: SUT=mimo, judge=minimax.
 judge:
-  provider: minimax
+  provider: openai
   tier: medium
 
-# Repo-specific settings: add below as needed (e.g. db paths, demo params).
+# Embedding source for D3 similarity search.
+#   provider: local  → sentence-transformers, offline (see requirements.txt)
+#   provider: voyage → Voyage AI (set api_key)
+#   provider: openai → OpenAI Embeddings (set api_key/base_url)
+#   provider: cohere → Cohere Embeddings (set api_key)
+#   provider: mock   → deterministic bag-of-ngrams (CI only)
+embedding:
+  provider: local
+  model: BAAI/bge-base-zh-v1.5
+  dimensions: 1536
+
+# Reranker after retrieval, before assembly.
+#   provider: llm    → LLM permutation via configured provider (default)
+#   provider: cohere → Cohere Rerank API
+#   provider: bge    → local BGE Reranker (via self-hosted API)
+#   provider: mock   → order-preserving (CI only)
+reranker:
+  provider: llm
+
+# 3-layer guardrail stack. Toggle nemoguardrails + llamaguard here.
+# Blocklist categories use the `block_*` / `warn_*` prefix convention;
+# input_guard.py derives severity from the prefix — no code change to add
+# a new category. Real regulated-domain vocabulary is loaded here (private)
+# and does not enter the shipped repo.
+guardrails:
+  enabled: true
+  nemoguardrails: true
+  llamaguard: true
+  blocklists:
+    block_category_a:
+      - "PLACEHOLDER_TERM_A1"
+      - "PLACEHOLDER_TERM_A2"
+    warn_category_a:
+      - "treatment"
+      - "cure"
+      - "therapeutic effect"
+    warn_category_b:
+      - "guaranteed returns"
+      - "risk-free profit"
+    block_category_b:
+      - "violence"
+      - "gambling"
+
+# Directory holding critical_events.demo.json + corpus/documents.json.
+data_dir: data
+seed_events_file: critical_events.demo.json

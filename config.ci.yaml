@@ -30,18 +30,23 @@ guardrails:
   nemoguardrails: false
   llamaguard: false
   fallback_reason: "CI mock mode"
+  # Blocklists are abstract placeholders. The mechanism (category → severity
+  # → block/warn) is the shipped IP; the actual regulated-domain vocabulary
+  # is loaded from operator-private config in production. Category names
+  # follow the `block_*` / `warn_*` prefix convention so severity is
+  # derivable without a separate map (see input_guard.py).
   blocklists:
-    political:
-      - "taiwan independence"
-      - "tibet independence"
-      - "overthrow the government"
-    medical:
-      - "treatment"
-      - "cure"
-      - "cure all"
-    financial:
-      - "guaranteed returns"
-      - "risk-free profit"
+    block_category_a:
+      - "PLACEHOLDER_TERM_A1"
+      - "PLACEHOLDER_TERM_A2"
+      - "PLACEHOLDER_TERM_A3"
+    warn_category_a:
+      - "PLACEHOLDER_TERM_B1"
+      - "PLACEHOLDER_TERM_B2"
+      - "PLACEHOLDER_TERM_B3"
+    warn_category_b:
+      - "PLACEHOLDER_TERM_C1"
+      - "PLACEHOLDER_TERM_C2"
 
 data_dir: data
 seed_events_file: critical_events.demo.json

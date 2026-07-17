@@ -54,7 +54,7 @@ Two-stage I/O boundary guardrails:
 - **Input guard** BEFORE routing/LLM (block/warn/pass severity).
 - **Output guard** AFTER synthesis BEFORE user (Constitutional-AI principles borrowed for policy design + hard blocklist + forced disclaimer).
 
-The locked defense-in-depth stack is **NeMo Guardrails** (NVIDIA; policy/orchestration layer via Colang DSL) paired with **Llama Guard 4** (Meta; LLM-based safety classifier, multimodal). If NeMo fails to install at implementation time, the system falls back to Guardrails AI + Llama Guard 4 and documents the substitution honestly. Optional named comparators include ProtectAI LLM Guard, Guardrails AI, Bedrock Guardrails, Azure Prompt Shields, and OpenAI Moderation.
+The locked defense-in-depth stack is **NeMo Guardrails** (NVIDIA; policy/orchestration layer via Colang DSL) paired with a **Llama Guard 4-style safety classifier** (Meta's Llama Guard 4 is the reference design; multimodal LLM-based content classification). Implementation note, stated up front so the rest of this section reads honestly: NeMo Guardrails is integrated for real (a live `LLMRails` + Colang config, see Layer 2 below), but the classifier layer is a **Llama Guard 4-*style* prompt on the configured provider**, not the real Meta Llama Guard 4 weights — this deployment's endpoint does not serve that model, and there is no `llama_guard4` pip package in the mainstream ecosystem (see the Layer 3 note below for the exact mechanism). Both LLM layers **fail open**: if NeMo or the classifier is unavailable or errors, the deterministic structural blocklist (Layer 1) remains authoritative and the request is not blocked by the missing layer. If NeMo itself fails to install, the system falls back to the structural mechanism with an honest annotation. Optional named comparators include ProtectAI LLM Guard, Guardrails AI, Bedrock Guardrails, Azure Prompt Shields, and OpenAI Moderation.
 
 ### D5 — LlamaIndex Workflows
 
@@ -78,7 +78,7 @@ D is the event source; A is the tombstone executor. If D directly mutates A's ch
 
 ### Why NeMo Guardrails + Llama Guard 4 instead of a single tool
 
-The 2026 defense-in-depth convention is layered, not monolithic. NeMo Guardrails is the orchestration/policy layer (Colang DSL, input/output rails, topic flows). Llama Guard 4 is the LLM-based safety classifier that judges content. One tool doing both is a single point of failure; two tools with distinct failure modes give true depth. If either framework is unavailable, the system falls back to the hand-rolled mechanism with an honest annotation — no silent degradation.
+The 2026 defense-in-depth convention is layered, not monolithic. NeMo Guardrails is the orchestration/policy layer (Colang DSL, input/output rails, topic flows) and is integrated for real. The safety-classifier layer follows the **Llama Guard 4** design (an LLM judging content against safety categories) but is implemented here as a **Llama Guard 4-*style* prompt on the configured provider** — the real Meta model is not served by this endpoint (see Layer 3). One tool doing both is a single point of failure; two layers with distinct failure modes give true depth. Both LLM layers fail open (the structural blocklist stays authoritative); if a framework is unavailable, the system falls back to the structural mechanism with an honest annotation — no silent degradation, and no claim to run a model this deployment cannot actually reach.
 
 ### Why the Critical Events Registry is original IP
 
@@ -124,7 +124,29 @@ Real-embedding options:
 
 ### Guardrail stack
 
-**NeMo Guardrails** (NVIDIA; orchestration/policy layer via Colang DSL — NOT a classifier) paired with **Llama Guard 4** (Meta; LLM-based safety classifier, multimodal). This is the 2026 standard layered architecture, not a single-tool choice. NeMo Guardrails is installed and detected at runtime; full Colang DSL rail configuration is stubbed for v1 and can be extended. Llama Guard 4 is referenced as an API-callable classifier; the pip package availability is pending verification — the framework wrapper falls back to the hand-rolled mechanism with honest annotation if the classifier is unavailable. Optional comparators: ProtectAI LLM Guard, Guardrails AI, Bedrock Guardrails, Azure Prompt Shields, OpenAI Moderation. **I/O boundary guardrails** enforce input screening before the LLM and output compliance before the user, with block / warn / pass severity.
+**3-layer defense-in-depth**, all layers active:
+
+- **Layer 1 — structural (always on).** `InputGuardrails` /
+  `OutputGuardrails` deterministic keyword match with `block_*` / `warn_*`
+  category prefix convention (severity derives from prefix so operators
+  add categories without code changes).
+- **Layer 2 — NeMo Guardrails Colang layer.** Real `LLMRails` constructed
+  from `config/guardrails/config.yml` + `prompts.yml`, pointed at the
+  configured OpenAI-compatible endpoint. Runs `self_check_input` /
+  `self_check_output` prompts on every input/output. Enabled via
+  `guardrails.nemoguardrails: true` in config.
+- **Layer 3 — Llama Guard 4-style LLM classifier.** LlamaGuard-shaped
+  safety prompt on the configured provider's medium tier (uses
+  `response_format=json_object` for parse stability). Enabled via
+  `guardrails.llamaguard: true`. The historical `import llama_guard4`
+  package gate was removed — no such package exists in the mainstream
+  ecosystem; the pragmatic pattern is a LlamaGuard-shaped prompt on any
+  capable OpenAI-compatible model.
+
+Any single layer failing (missing key, network error, framework
+unavailable) fails-OPEN to the layers below with a WARNING log — never
+silent. Optional comparators: ProtectAI LLM Guard, Guardrails AI,
+Bedrock Guardrails, Azure Prompt Shields, OpenAI Moderation.
 
 ### Constitutional-AI principles
 
@@ -133,7 +155,7 @@ Anthropic's Constitutional AI is a training-time / model-alignment concept, NOT 
 ## Setup
 
 ```bash
-# Create the dedicated conda environment (mandatory per SPEC §6)
+# Create the dedicated conda environment
 conda create -n context-invalidation-registry python=3.11 -y
 conda activate context-invalidation-registry
 
@@ -152,19 +174,30 @@ Mode switching is strictly via the `mode:` field in these files, NOT environment
 ## Usage
 
 ```bash
-# Run all demos (smoke test)
-python -m context_invalidation_registry.run --all
+# Run all 5 demos (smoke test) on CI mock mode
+python -m context_invalidation_registry.run --all --config config.ci.yaml
 
 # Run a single demo
-python -m context_invalidation_registry.run --demo d1
-python -m context_invalidation_registry.run --demo d2
-python -m context_invalidation_registry.run --demo d3
-python -m context_invalidation_registry.run --demo d4
-python -m context_invalidation_registry.run --demo d5
+python -m context_invalidation_registry.run --demo d1 --config config.ci.yaml
 
-# Use a specific config
-python -m context_invalidation_registry.run --all --config config.ci.yaml
+# Run the real integration pipeline (needs config.yaml with real api_key)
+python -m context_invalidation_registry.integration.run_real \
+  --query "food marketing strategy relying on national standards compliance" \
+  --region CN --config config.yaml
 ```
+
+## Tests
+
+```bash
+# Offline (deterministic, no LLM calls)
+python -m pytest tests/ -m "not integration"
+
+# Integration (real LLM via gpt-agent.cc; skips when no api_key configured)
+python -m pytest tests/ -m integration
+```
+
+Current state: **41/41 tests pass** — 38 offline +
+3 integration exercising NeMo Colang + LlamaGuard against real LLM.
 
 ## Demos
 
@@ -178,7 +211,7 @@ python -m context_invalidation_registry.run --all --config config.ci.yaml
 
 ## Seed data
 
-`data/critical_events.demo.json` is a desensitized version of the original seed data. Real entity names have been replaced with synthetic aliases; event type, 8-field schema, and staleness logic are preserved. The original reference data stays in `reference/` (private input) and does not enter the public repo.
+`data/critical_events.demo.json` uses synthetic entity names; the event type, 8-field schema, and staleness logic are the real structure the registry operates on.
 
 ## Cross-repo contracts
 

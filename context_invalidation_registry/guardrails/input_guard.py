@@ -18,15 +18,19 @@ class InputGuardrails:
         self.blocklists = blocklists or {}
 
     def validate(self, user_input: str) -> GuardrailVerdict:
+        """Structural blocklist match. Severity derives from the category
+        name prefix: `block_*` → block, `warn_*` → warn, else → warn.
+        The prefix convention lets operators add new categories without
+        touching this code — see config.ci.yaml for the shipped shape."""
         violations = []
         blocked = False
 
         for category, keywords in self.blocklists.items():
             if not keywords:
                 continue
+            action = "block" if category.startswith("block_") else "warn"
             for kw in keywords:
                 if kw in user_input:
-                    action = "block" if category in ("political", "security") else "warn"
                     if action == "block":
                         blocked = True
                     violations.append({

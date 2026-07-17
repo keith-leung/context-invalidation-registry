@@ -14,8 +14,12 @@ from context_invalidation_registry.models import GuardrailVerdict
 
 # Constitutional-AI principles borrowed for policy design (NOT implemented as runtime mechanism)
 # per SPEC §6.5 clarification — output is checked against principles via LLM reasoning.
+# Principles are operator-configurable; the shipped set below is a demo-domain
+# example (marketing-advisory tone). Real deployments load their own principle
+# list from config; the mechanism (LLM-reasoned check against a principle list)
+# is what this file demonstrates, not any specific principle wording.
 _CONSTITUTIONAL_PRINCIPLES = [
-    "Output must not contain politically sensitive content or commentary on political systems.",
+    "Output must comply with the operator-configured regulated-content policy.",
     "Output must not make or imply medical efficacy claims about any product.",
     "Output must not guarantee specific sales figures, revenue, or growth rates.",
     "Competitive analysis in output must be based on public data and must not use disparaging language.",

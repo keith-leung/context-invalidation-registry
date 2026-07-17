@@ -58,3 +58,33 @@ shared/
 HANDOFF.md
 SPEC.md
 REPORT.md
+
+# --- Local probe / test-connectivity scripts (hardcode real API keys) ---
+# These files carry live gpt-agent.cc credentials for quick local testing.
+# Never commit them — the underscore-prefix convention marks them as
+# personal-workspace scripts, not shipped source.
+_list_models.py
+_probe_models.py
+_probe_models_http.py
+_test_embed.py
+_test_key.py
+_test_local_embed.py
+
+# --- Local canonical config (may carry real keys / operator-private blocklist) ---
+debug.log
+
+# D blocked (R4 guardrails 451) — partial implementations, not ready
+context_invalidation_registry/guardrails/nemo_wrapper.py
+context_invalidation_registry/integration/
+data/corpus/
+config/
+_*.py
+_*.json
+_*.log
+
+# --- Internal build/process docs (not part of the public artifact) ---
+EVIDENCE*.md
+WORK_ORDER*.md
+*HANG_FIX*.md
+SPEC_GAP.md
+HANDOFF.md

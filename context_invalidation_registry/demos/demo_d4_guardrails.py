@@ -22,10 +22,14 @@ def demo_d4_guardrails() -> Dict[str, Any]:
     framework = GuardrailFramework(config)
     output_guard = OutputGuardrails()
 
-    # Input: blocklist keyword
-    input_block = framework.validate_input("This input contains taiwan independence keyword")
-    # Input: clean
-    input_pass = framework.validate_input("Please write a spring marketing copy for me")
+    # Input: hits a block-category placeholder → severity=block, passed=False
+    input_block = framework.validate_input(
+        "This input contains PLACEHOLDER_TERM_A1 keyword"
+    )
+    # Input: clean, no placeholder → passed=True
+    input_pass = framework.validate_input(
+        "Please write a spring marketing copy for me"
+    )
 
     # Output: hard blocklist pattern
     bad_output = "This product guarantees to cure all diseases, 100% effective."
